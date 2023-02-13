@@ -1,0 +1,91 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "webapp.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{ include "webapp.labels" . | nindent 4 }}
+  annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "todoService/actuator/prometheus"
+spec:
+  replicas: {{ .Values.replicaCount }}
+  progressDeadlineSeconds: {{ .Values.progressDeadlineSeconds }}
+  minReadySeconds: {{ .Values.minReadySeconds }}
+  strategy:
+    rollingUpdate:
+      maxSurge: {{ .Values.rollingUpdate.maxSurge }}
+      maxUnavailable: {{ .Values.rollingUpdate.maxUnavailable }}
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{ include "webapp.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{ include "webapp.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      initContainers:
+        - name: {{ .Values.initContainer.name }}
+          image: {{ .Values.initContainer.image }}
+          {{- with .Values.initContainer.args }}
+          args: 
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            - name: FLYWAY_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "webapp.name" . }}-cm
+                  key: DB_URL
+            - name: FLYWAY_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ include "webapp.name" . }}-cm
+                  key: DB_USER
+            - name: FLYWAY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "webapp.name" . }}-secret
+                  key: DB_PASSWORD
+          volumeMounts:
+          - mountPath: /flyway/sql
+            name: sql
+      volumes:
+        - name: sql
+          configMap:
+            name: {{ include "webapp.name" . }}-flyway-cm 
+      containers:
+        - image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          name: {{ .Chart.Name }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.appContainer.containerPort }}
+              protocol: {{ .Values.appContainer.protocol }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probe.readiness.path }}
+              port: {{ .Values.probe.readiness.port }}
+            initialDelaySeconds: {{ .Values.probe.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probe.readiness.periodSeconds }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probe.liveness.path }}
+              port: {{ .Values.probe.liveness.port }}
+            initialDelaySeconds: {{ .Values.probe.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probe.liveness.periodSeconds }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "webapp.name" . }}-cm
+          env:
+          - name: DB_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ include "webapp.name" . }}-secret
+                key: DB_PASSWORD

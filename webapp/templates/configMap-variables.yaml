@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "webapp.name" . }}-cm
+  namespace: {{ .Release.Namespace }}
+data:
+  DB_HOST: {{ .Values.configVariables.dbHost | quote }}
+  DB_PORT: {{ .Values.configVariables.dbPort | quote }}
+  DB_NAME: {{ .Values.configVariables.dbName | quote }}
+  DB_USER: {{ .Values.configVariables.dbUser | quote }}
+  DB_SCHEMA_NAME: {{ .Values.configVariables.dbSchemaName | quote }}
+  DB_URL: {{ .Values.configVariables.dbURL | quote }}

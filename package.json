@@ -1,0 +1,29 @@
+{
+  "name": "helm-chart-csye-7125-group-04",
+  "version": "0.1.0",
+  "description": "### Helm template command ```helm template webapp/. -f myValues.yaml```",
+  "release": {
+  "branches": [ "main" ],
+  "repositoryUrl": "git@github.com:cyse7125-fall2022-group04/helm-chart.git",
+  "tagFormat": "Helm_Chartv${version}",
+    "plugins": [
+      ["@semantic-release/github", {
+      "assets": [
+        {"path": "webapp/Chart.yaml", "label": "Helm Chart"}
+      ]
+    }],
+    [
+      "semantic-release-helm",
+      {
+        "chartPath": "./webapp",
+        "onlyUpdateVersion": true
+        
+      }
+    ]
+  ],
+  "_": [],
+  "b": [ "main" ],
+  "debug": true,
+  "$0": "node_modules/.bin/semantic-release"
+}
+}
